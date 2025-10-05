@@ -1,18 +1,12 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const NoteSchema = new mongoose.Schema({
-  semester: String,
-  subject: String,
-  title: String,
-  tags: [String],
-  fileUrl: String,
-  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  ratings: [
-    {
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      stars: Number
-    }
-  ]
+  department: { type: String, required: true },
+  semester: { type: Number, required: true },
+  subject: { type: String, required: true },
+  tag: { type: String },
+  filePath: { type: String, required: true }, // This is the uploaded file path
+  uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
-module.exports = mongoose.model("Note", NoteSchema);
+module.exports = mongoose.model('Note', NoteSchema);
