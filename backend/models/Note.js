@@ -5,8 +5,12 @@ const NoteSchema = new mongoose.Schema({
   semester: { type: Number, required: true },
   subject: { type: String, required: true },
   tag: { type: String },
-  fileId: { type: mongoose.Schema.Types.ObjectId, required: true }, // GridFS file ID
-  filename: { type: String, required: true }, // Original file name for display
+  filename: { type: String, required: true },
+  fileData: { 
+    data: Buffer,           // The actual file content
+    contentType: String     // MIME type like 'application/pdf'
+  },
+  fileSize: { type: Number }, // File size in bytes
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

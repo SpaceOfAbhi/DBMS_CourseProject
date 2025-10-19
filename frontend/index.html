@@ -5,7 +5,6 @@
 <title>Notes Portal</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Caveat+Brush&display=swap');
-
   body {
     font-family: 'Caveat Brush', cursive;
     margin: 0; padding: 0;
@@ -131,7 +130,7 @@
 </div>
 
 <div id="upload" class="container hidden">
-  <button class="upload-btn" onclick="showPage('home')">← Back to Home</button>
+  <button class="upload-btn" onclick="showPage('departmentPage')">← Back to Departments</button>
   <h2>Upload Notes</h2>
   <form id="uploadForm">
     <select id="uploadDept"><option value="">Select Department</option></select>
@@ -144,7 +143,8 @@
 </div>
 
 <script>
-const API_URL = "https://notes-sharing-platform-hbo9.onrender.com";
+const API_URL = "http://localhost:5000";
+
 let selectedDepartment = null;
 let selectedSemester = null;
 
@@ -164,8 +164,8 @@ async function loginUser(){
   });
   const data=await res.json();
   if(res.ok){ 
-    localStorage.setItem("token",data.token); 
-    alert("Login successful!"); 
+    localStorage.setItem("token",data.token);
+    localStorage.setItem("userId",data.user.id); // Store user ID
     renderDepartments(); 
     showPage("departmentPage"); 
   } else alert(data.error || "Login failed!");
@@ -217,63 +217,128 @@ function loadSubjects(dept,sem){
   const container=document.getElementById("subjectsTiles"); container.innerHTML="";
   (subjectsData[dept]?.[sem]||["No subjects available"]).forEach(sub=>{
     const div=document.createElement("div"); div.classList.add("tile"); div.textContent=sub;
-    div.onclick=()=>loadNotes(sub); container.appendChild(div);
+    div.onclick=()=>loadNotes(dept,sem,sub); container.appendChild(div);
   });
 }
 
-// Notes
-async function loadNotes(subject){
+// ✅ Load Notes (fixed)
+// Notes - Load by subject
+async function loadNotes(dept, sem, subject) {
+ 
+const currentUserId = localStorage.getItem("userId");
   showPage("notesPage");
-  document.getElementById("notesHeading").textContent=`${subject} Notes`;
-  const notesList=document.getElementById("notesList"); 
-  notesList.innerHTML="<p>Loading notes...</p>";
-  try{
-    const res=await fetch(`${API_URL}/api/notes/subject/${subject}`,{
-      headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
+  document.getElementById("notesHeading").textContent = `${subject} Notes`;
+  const notesList = document.getElementById("notesList");
+  notesList.innerHTML = "<p>Loading notes...</p>";
+
+  try {
+    const res = await fetch(`${API_URL}/api/notes/subject/${subject}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
     });
-    const notes=await res.json();
-    if(!notes || notes.length===0){ notesList.innerHTML="<p>No notes available for this subject.</p>"; return; }
-    notesList.innerHTML="";
-    notes.forEach(note=>{
-      const div=document.createElement("div"); div.classList.add("note");
-      div.innerHTML=`<div><h3>${note.subject} - ${note.tag||'No Tag'}</h3>
-        <p class="meta">Uploaded by: ${note.uploadedBy?.name||'Unknown'} | ${new Date(note.createdAt).toLocaleDateString()}</p></div>`;
-      const btnDiv=document.createElement("div"); btnDiv.classList.add("note-buttons");
 
-      // ✅ View button using GridFS
-      const viewBtn=document.createElement("button"); 
-      viewBtn.textContent="View"; viewBtn.classList.add("view-btn");
-      viewBtn.onclick=()=>window.open(`${API_URL}/api/notes/view/${note._id}`, "_blank");
+    console.log("Notes response status:", res.status);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to fetch notes: ${res.status} - ${errorText}`);
+    }
 
-      // Delete button
-      const deleteBtn=document.createElement("button"); 
-      deleteBtn.textContent="Delete"; deleteBtn.classList.add("delete-btn");
-      deleteBtn.onclick=async ()=>{
-        if(!note._id){ alert("❌ Missing note ID"); return; }
-        if(confirm("Delete this note?")){
-          try{
-            const delRes=await fetch(`${API_URL}/api/notes/${note._id}`,{
-              method:"DELETE", headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
-            });
-            const data=await delRes.json();
-            if(delRes.ok){ alert("✅ Note deleted!"); loadNotes(subject); }
-            else alert(`❌ ${data.error||"Failed to delete"}`);
-          } catch(e){ console.error(e); alert("❌ Server error while deleting"); }
+    const notes = await res.json();
+    console.log("Loaded notes:", notes); // Debug log
+    
+    if (!notes || notes.length === 0) {
+      notesList.innerHTML = "<p>No notes available for this subject.</p>";
+      return;
+    }
+
+    notesList.innerHTML = "";
+    notes.forEach(note => {
+      console.log("Note data:", note); // Debug each note
+      
+      const div = document.createElement("div");
+      div.classList.add("note");
+      div.innerHTML = `
+        <div>
+          <h3>${note.subject} - ${note.tag || 'No Tag'}</h3>
+          <p class="meta">Uploaded by: ${note.uploadedBy?.name || 'Unknown'} | ${new Date(note.createdAt).toLocaleDateString()}</p>
+          <p class="meta">File ID: ${note.fileId}</p> <!-- Debug info -->
+        </div>
+      `;
+
+      const btnDiv = document.createElement("div");
+      btnDiv.classList.add("note-buttons");
+
+      // VIEW button
+      const viewBtn = document.createElement("button");
+      viewBtn.textContent = "View";
+      viewBtn.classList.add("view-btn");
+     // In your loadNotes function, the view button stays the same:
+viewBtn.onclick = async () => {
+  try {
+    const fileUrl = `${API_URL}/api/notes/public/file/${note._id}`;
+    console.log("Opening file:", fileUrl);
+    window.open(fileUrl, "_blank");
+  } catch (err) {
+    console.error("View error:", err);
+    alert("Error viewing file: " + err.message);
+  }
+};
+      const isUploader = note.uploadedBy && note.uploadedBy.toString() === currentUserId;
+      // DELETE button
+      if (isUploader) {
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "Delete";
+  deleteBtn.classList.add("delete-btn");
+  deleteBtn.onclick = async () => {
+    if(confirm("Delete this note?")) {
+      try {
+        console.log("Attempting to delete note:", note._id);
+        const delRes = await fetch(`${API_URL}/api/notes/${note._id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        const data = await delRes.json();
+        console.log("Delete response:", data);
+        if (delRes.ok) {
+          alert("✅ Note deleted!");
+          loadNotes(dept, sem, subject);
+        } else {
+          alert(`❌ ${data.error || "Failed to delete"}`);
         }
-      };
-
-      btnDiv.appendChild(viewBtn); 
-      btnDiv.appendChild(deleteBtn);
-      div.appendChild(btnDiv); 
+      } catch(e) {
+        console.error("Delete error:", e);
+        alert("❌ Server error while deleting");
+      }
+    }
+  };
+  btnDiv.appendChild(deleteBtn);
+}
+      btnDiv.appendChild(viewBtn);
+     
+      div.appendChild(btnDiv);
       notesList.appendChild(div);
     });
-  }catch(e){ notesList.innerHTML="<p>Error loading notes.</p>"; console.error(e); }
+  } catch (e) {
+    console.error("Load notes error:", e);
+    notesList.innerHTML = `<p>Error loading notes: ${e.message}</p>`;
+  }
 }
 
-// Upload Form
+
+// ✅ Upload Form Logic
 const uploadDept=document.getElementById("uploadDept"); 
 const uploadSem=document.getElementById("uploadSem"); 
 const uploadSubj=document.getElementById("uploadSubj");
+
+function populateUploadForm(){
+  departmentList.forEach(dept=>{
+    const opt=document.createElement("option"); opt.value=dept; opt.textContent=dept; uploadDept.appendChild(opt);
+  });
+  for(let i=1;i<=8;i++){
+    const opt=document.createElement("option"); opt.value=i; opt.textContent=`Semester ${i}`; uploadSem.appendChild(opt);
+  }
+}
+
 function updateUploadSubjects(){
   const dept=uploadDept.value; const sem=uploadSem.value;
   uploadSubj.innerHTML='<option value="">Select Subject</option>';
@@ -281,28 +346,37 @@ function updateUploadSubjects(){
     const opt=document.createElement("option"); opt.value=sub; opt.textContent=sub; uploadSubj.appendChild(opt);
   });
 }
-uploadDept.addEventListener("change",updateUploadSubjects); uploadSem.addEventListener("change",updateUploadSubjects);
+uploadDept.addEventListener("change",updateUploadSubjects); 
+uploadSem.addEventListener("change",updateUploadSubjects);
 
 document.getElementById("uploadForm").addEventListener("submit",async e=>{
   e.preventDefault();
+  const file=document.getElementById("fileInput").files[0];
+  if(!uploadDept.value||!uploadSem.value||!uploadSubj.value||!file){ return alert("Please fill all fields!"); }
+
   const formData=new FormData();
   formData.append("department",uploadDept.value);
   formData.append("semester",uploadSem.value);
   formData.append("subject",uploadSubj.value);
   formData.append("tag",document.getElementById("tagInput").value);
-  formData.append("file",document.getElementById("fileInput").files[0]);
+  formData.append("file",file);
 
-  const res=await fetch(`${API_URL}/api/notes/upload`,{
-    method:"POST",
-    headers:{Authorization:`Bearer ${localStorage.getItem("token")}`},
-    body:formData
-  });
-  const data=await res.json();
-  if(res.ok){ alert("Upload successful!"); document.getElementById("uploadForm").reset(); showPage("departmentPage"); }
-  else alert(data.error||"Upload failed!");
+  try{
+    const res=await fetch(`${API_URL}/api/notes/upload`,{
+      method:"POST",
+      headers:{Authorization:`Bearer ${localStorage.getItem("token")}`},
+      body:formData
+    });
+    const data=await res.json();
+    if(res.ok){
+      alert("✅ Upload successful!");
+      document.getElementById("uploadForm").reset();
+      showPage("departmentPage");
+    }else alert(`❌ ${data.error||'Upload failed!'}`);
+  }catch(e){ console.error(e); alert("Upload failed!"); }
 });
 
-// Initialize departments
+populateUploadForm();
 renderDepartments();
 </script>
 </body>
