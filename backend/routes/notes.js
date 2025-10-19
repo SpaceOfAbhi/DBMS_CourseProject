@@ -62,14 +62,16 @@ router.get('/subject/:subject', authMiddleware, async (req, res) => {
 });
 
 // ❌ Delete note
+// ❌ Delete note
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
     // Only uploader can delete
-    if (!note.uploadedBy.equals(decoded.id))
+    if (note.uploadedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
+    }
 
     // Delete from Cloudinary if it exists
     if (note.cloudinaryId) {
@@ -79,9 +81,10 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     await note.deleteOne();
     res.json({ message: 'Note deleted successfully' });
   } catch (err) {
-    console.error(err);
+    console.error('Delete note error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
+
 
 module.exports = router;

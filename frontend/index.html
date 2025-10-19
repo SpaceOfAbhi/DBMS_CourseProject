@@ -87,6 +87,7 @@
 <body>
 <header><h1>Notes Portal</h1></header>
 
+<!-- AUTH PAGES -->
 <div id="login" class="auth-box">
   <h2>Login</h2>
   <input id="loginEmail" type="text" placeholder="Email">
@@ -104,6 +105,7 @@
   <p>Already have an account? <a href="#" onclick="showPage('login')">Login</a></p>
 </div>
 
+<!-- MAIN PAGES -->
 <div id="departmentPage" class="container hidden">
   <button class="upload-btn" onclick="showPage('upload')">Upload Notes</button>
   <h2>Select Department</h2>
@@ -184,7 +186,12 @@ async function loginUser(){
     body:JSON.stringify({email,password})
   });
   const data = await res.json();
-  if(res.ok){ localStorage.setItem("token",data.token); alert("Login successful!"); renderDepartments(); showPage("departmentPage"); }
+  if(res.ok){ 
+    localStorage.setItem("token",data.token); 
+    alert("Login successful!"); 
+    renderDepartments(); 
+    showPage("departmentPage"); 
+  }
   else alert(data.error || "Login failed!");
 }
 
@@ -208,8 +215,11 @@ function renderDepartments(){
   const container = document.getElementById("departmentTiles");
   container.innerHTML = "";
   departmentList.forEach(dept=>{
-    const div = document.createElement("div"); div.classList.add("tile"); div.textContent=dept;
-    div.onclick=()=>openDepartment(dept); container.appendChild(div);
+    const div = document.createElement("div"); 
+    div.classList.add("tile"); 
+    div.textContent=dept;
+    div.onclick=()=>openDepartment(dept); 
+    container.appendChild(div);
   });
 }
 
@@ -223,7 +233,7 @@ function openDepartment(dept){
   }
 }
 
-// Subjects Data (added S6 subjects)
+// Subjects Data
 const subjectsData={
   "CSE":{
     5:["Computer Networks","System Software","Management of Software Systems","Disaster Management","Formal Language and Automata Theory","Microprocessors and Microcontrollers","Other"],
@@ -270,7 +280,6 @@ async function loadNotes(dept,sem,sub){
           <p class="meta">Uploaded by: ${note.uploadedBy?.username||'Unknown'} | Date: ${new Date(note.createdAt).toLocaleDateString()}</p>
         </div>
       `;
-
       const btnDiv=document.createElement("div"); 
       btnDiv.classList.add("note-buttons");
 
@@ -278,56 +287,35 @@ async function loadNotes(dept,sem,sub){
       const viewBtn=document.createElement("button"); 
       viewBtn.textContent="View"; 
       viewBtn.classList.add("view-btn");
-      viewBtn.onclick=()=>window.open(note.fileUrl,"_blank");
+      viewBtn.onclick=()=>window.open(note.filePath,"_blank");
 
       // DELETE button
-      // DELETE button
-const deleteBtn = document.createElement("button");
-deleteBtn.textContent = "Delete";
-deleteBtn.classList.add("delete-btn");
-
-deleteBtn.onclick = async () => {
-  if (!note._id) {
-    alert("❌ Cannot delete: missing note ID.");
-    console.error("Delete error: note has no _id", note);
-    return;
-  }
-
-  if (confirm("Are you sure you want to delete this note?")) {
-    try {
-      const res = await fetch(`${API_URL}/api/notes/${note._id}`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json"
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "Delete";
+      deleteBtn.classList.add("delete-btn");
+      deleteBtn.onclick = async () => {
+        if (!note._id) { alert("❌ Cannot delete: missing note ID."); console.error("Delete error: note has no _id", note); return; }
+        if (confirm("Are you sure you want to delete this note?")) {
+          try {
+            const res = await fetch(`${API_URL}/api/notes/${note._id}`, {
+              method: "DELETE",
+              headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+            });
+            const data = await res.json();
+            if (res.ok) {
+              alert("✅ Note deleted successfully!");
+              loadNotes(selectedDepartment, selectedSemester, note.subject);
+            } else { alert(`❌ ${data.error || "Failed to delete note."}`); }
+          } catch (err) { console.error(err); alert("❌ Server or network error while deleting."); }
         }
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert("✅ Note deleted successfully!");
-        loadNotes(selectedDepartment, selectedSemester, note.subject);
-      } else {
-        alert(`❌ ${data.error || "Failed to delete note."}`);
-      }
-    } catch (err) {
-      console.error("Delete request error:", err);
-      alert("❌ Server or network error while deleting.");
-    }
-  }
-};
-
+      };
 
       btnDiv.appendChild(viewBtn);
       btnDiv.appendChild(deleteBtn);
       div.appendChild(btnDiv); 
       notesList.appendChild(div);
     });
-  }catch(e){
-    notesList.innerHTML="<p>Error loading notes.</p>"; 
-    console.error(e);
-  }
+  }catch(e){ notesList.innerHTML="<p>Error loading notes.</p>"; console.error(e); }
 }
 
 // Upload Form
@@ -336,8 +324,7 @@ const uploadSem=document.getElementById("uploadSem");
 const uploadSubj=document.getElementById("uploadSubj");
 
 function updateUploadSubjects(){
-  const dept=uploadDept.value; 
-  const sem=uploadSem.value; 
+  const dept=uploadDept.value; const sem=uploadSem.value; 
   uploadSubj.innerHTML='<option value="">Select Subject</option>';
   if(subjectsData[dept]?.[sem]) subjectsData[dept][sem].forEach(sub=>{
     const opt=document.createElement("option"); opt.value=sub; opt.textContent=sub; uploadSubj.appendChild(opt);
