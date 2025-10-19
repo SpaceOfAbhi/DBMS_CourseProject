@@ -87,7 +87,7 @@
 <body>
 <header><h1>Notes Portal</h1></header>
 
-<!-- AUTH PAGES -->
+<!-- AUTH -->
 <div id="login" class="auth-box">
   <h2>Login</h2>
   <input id="loginEmail" type="text" placeholder="Email">
@@ -134,31 +134,9 @@
   <button class="upload-btn" onclick="showPage('home')">← Back to Home</button>
   <h2>Upload Notes</h2>
   <form id="uploadForm">
-    <select id="uploadDept">
-      <option value="">Select Department</option>
-      <option value="CSE">CSE</option>
-      <option value="MECH">MECH</option>
-      <option value="CIVIL">CIVIL</option>
-      <option value="EEE">EEE</option>
-      <option value="ECE">ECE</option>
-      <option value="AIDS">AIDS</option>
-      <option value="CSCY">CSCY</option>
-      <option value="CSAI">CSAI</option>
-    </select>
-    <select id="uploadSem">
-      <option value="">Select Semester</option>
-      <option value="1">Sem 1</option>
-      <option value="2">Sem 2</option>
-      <option value="3">Sem 3</option>
-      <option value="4">Sem 4</option>
-      <option value="5">Sem 5</option>
-      <option value="6">Sem 6</option>
-      <option value="7">Sem 7</option>
-      <option value="8">Sem 8</option>
-    </select>
-    <select id="uploadSubj">
-      <option value="">Select Subject</option>
-    </select>
+    <select id="uploadDept"><option value="">Select Department</option></select>
+    <select id="uploadSem"><option value="">Select Semester</option></select>
+    <select id="uploadSubj"><option value="">Select Subject</option></select>
     <input id="tagInput" type="text" placeholder="Tag">
     <input id="fileInput" type="file">
     <button type="submit">Upload</button>
@@ -178,67 +156,55 @@ function showPage(pageId){
 
 // AUTH
 async function loginUser(){
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginPassword").value;
-  const res = await fetch(`${API_URL}/api/auth/login`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+  const email=document.getElementById("loginEmail").value;
+  const password=document.getElementById("loginPassword").value;
+  const res=await fetch(`${API_URL}/api/auth/login`,{
+    method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({email,password})
   });
-  const data = await res.json();
+  const data=await res.json();
   if(res.ok){ 
     localStorage.setItem("token",data.token); 
     alert("Login successful!"); 
     renderDepartments(); 
     showPage("departmentPage"); 
-  }
-  else alert(data.error || "Login failed!");
+  } else alert(data.error || "Login failed!");
 }
 
 async function signupUser(){
-  const name = document.getElementById("signupName").value;
-  const email = document.getElementById("signupEmail").value;
-  const password = document.getElementById("signupPassword").value;
-  const res = await fetch(`${API_URL}/api/auth/signup`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
+  const name=document.getElementById("signupName").value;
+  const email=document.getElementById("signupEmail").value;
+  const password=document.getElementById("signupPassword").value;
+  const res=await fetch(`${API_URL}/api/auth/signup`,{
+    method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({name,email,password})
   });
-  const data = await res.json();
+  const data=await res.json();
   if(res.ok){ alert("Signup successful! Please login."); showPage("login"); }
   else alert(data.error || "Signup failed!");
 }
 
 // Departments → Semesters → Subjects
-const departmentList = ["CSE","MECH","CIVIL","EEE","ECE","AIDS","CSCY","CSAI"];
+const departmentList=["CSE","MECH","CIVIL","EEE","ECE","AIDS","CSCY","CSAI"];
 function renderDepartments(){
-  const container = document.getElementById("departmentTiles");
-  container.innerHTML = "";
+  const container=document.getElementById("departmentTiles"); container.innerHTML="";
   departmentList.forEach(dept=>{
-    const div = document.createElement("div"); 
-    div.classList.add("tile"); 
-    div.textContent=dept;
-    div.onclick=()=>openDepartment(dept); 
-    container.appendChild(div);
+    const div=document.createElement("div"); div.classList.add("tile"); div.textContent=dept;
+    div.onclick=()=>openDepartment(dept); container.appendChild(div);
   });
 }
 
 function openDepartment(dept){
   selectedDepartment=dept; showPage("home");
-  const container=document.getElementById("semesterTiles");
-  container.innerHTML="";
+  const container=document.getElementById("semesterTiles"); container.innerHTML="";
   for(let i=1;i<=8;i++){
     const div=document.createElement("div"); div.classList.add("tile"); div.textContent=`Semester ${i}`;
     div.onclick=()=>openSemester(i); container.appendChild(div);
   }
 }
 
-// Subjects Data
 const subjectsData={
-  "CSE":{
-    5:["Computer Networks","System Software","Management of Software Systems","Disaster Management","Formal Language and Automata Theory","Microprocessors and Microcontrollers","Other"],
-    6:["COMPILER DESIGN","COMPUTER GRAPHICS AND IMAGE PROCESSING","ALGORITHM ANALYSIS AND DESIGN","INDUSTRIAL ECONOMICS & FOREIGN TRADE"]
-  }
+  "CSE":{5:["Computer Networks","System Software","Management of Software Systems","Disaster Management","Formal Language and Automata Theory","Microprocessors and Microcontrollers","Other"],6:["COMPILER DESIGN","COMPUTER GRAPHICS AND IMAGE PROCESSING","ALGORITHM ANALYSIS AND DESIGN","INDUSTRIAL ECONOMICS & FOREIGN TRADE"]}
 };
 
 function openSemester(sem){
@@ -249,13 +215,13 @@ function openSemester(sem){
 
 function loadSubjects(dept,sem){
   const container=document.getElementById("subjectsTiles"); container.innerHTML="";
-  (subjectsData[dept]?.[sem] || ["No subjects available"]).forEach(sub=>{
+  (subjectsData[dept]?.[sem]||["No subjects available"]).forEach(sub=>{
     const div=document.createElement("div"); div.classList.add("tile"); div.textContent=sub;
     div.onclick=()=>loadNotes(dept,sem,sub); container.appendChild(div);
   });
 }
 
-// Load notes with VIEW and DELETE buttons
+// Notes
 async function loadNotes(dept,sem,sub){
   showPage("notesPage");
   document.getElementById("notesHeading").textContent=`${sub} Notes`;
@@ -266,75 +232,50 @@ async function loadNotes(dept,sem,sub){
       headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
     });
     const notes=await res.json();
-    if(!notes || notes.length===0){ 
-      notesList.innerHTML="<p>No notes available for this subject.</p>"; 
-      return; 
-    }
-    notesList.innerHTML = "";
+    if(!notes || notes.length===0){ notesList.innerHTML="<p>No notes available for this subject.</p>"; return; }
+    notesList.innerHTML="";
     notes.forEach(note=>{
-      const div=document.createElement("div"); 
-      div.classList.add("note");
-      div.innerHTML=`
-        <div>
-          <h3>${note.subject} - ${note.tag||'No Tag'}</h3>
-          <p class="meta">Uploaded by: ${note.uploadedBy?.username||'Unknown'} | Date: ${new Date(note.createdAt).toLocaleDateString()}</p>
-        </div>
-      `;
-      const btnDiv=document.createElement("div"); 
-      btnDiv.classList.add("note-buttons");
+      const div=document.createElement("div"); div.classList.add("note");
+      div.innerHTML=`<div><h3>${note.subject} - ${note.tag||'No Tag'}</h3>
+        <p class="meta">Uploaded by: ${note.uploadedBy?.name||'Unknown'} | ${new Date(note.createdAt).toLocaleDateString()}</p></div>`;
+      const btnDiv=document.createElement("div"); btnDiv.classList.add("note-buttons");
 
-      // VIEW button
-      const viewBtn=document.createElement("button"); 
-      viewBtn.textContent="View"; 
-      viewBtn.classList.add("view-btn");
+      const viewBtn=document.createElement("button"); viewBtn.textContent="View"; viewBtn.classList.add("view-btn");
       viewBtn.onclick=()=>window.open(note.filePath,"_blank");
 
-      // DELETE button
-      const deleteBtn = document.createElement("button");
-      deleteBtn.textContent = "Delete";
-      deleteBtn.classList.add("delete-btn");
-      deleteBtn.onclick = async () => {
-        if (!note._id) { alert("❌ Cannot delete: missing note ID."); console.error("Delete error: note has no _id", note); return; }
-        if (confirm("Are you sure you want to delete this note?")) {
-          try {
-            const res = await fetch(`${API_URL}/api/notes/${note._id}`, {
-              method: "DELETE",
-              headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+      const deleteBtn=document.createElement("button"); deleteBtn.textContent="Delete"; deleteBtn.classList.add("delete-btn");
+      deleteBtn.onclick=async ()=>{
+        if(!note._id){ alert("❌ Missing note ID"); return; }
+        if(confirm("Delete this note?")){
+          try{
+            const delRes=await fetch(`${API_URL}/api/notes/${note._id}`,{
+              method:"DELETE", headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
             });
-            const data = await res.json();
-            if (res.ok) {
-              alert("✅ Note deleted successfully!");
-              loadNotes(selectedDepartment, selectedSemester, note.subject);
-            } else { alert(`❌ ${data.error || "Failed to delete note."}`); }
-          } catch (err) { console.error(err); alert("❌ Server or network error while deleting."); }
+            const data=await delRes.json();
+            if(delRes.ok){ alert("✅ Note deleted!"); loadNotes(dept,sem,sub); }
+            else alert(`❌ ${data.error||"Failed to delete"}`);
+          } catch(e){ console.error(e); alert("❌ Server error while deleting"); }
         }
       };
 
-      btnDiv.appendChild(viewBtn);
-      btnDiv.appendChild(deleteBtn);
-      div.appendChild(btnDiv); 
-      notesList.appendChild(div);
+      btnDiv.appendChild(viewBtn); btnDiv.appendChild(deleteBtn);
+      div.appendChild(btnDiv); notesList.appendChild(div);
     });
   }catch(e){ notesList.innerHTML="<p>Error loading notes.</p>"; console.error(e); }
 }
 
 // Upload Form
-const uploadDept=document.getElementById("uploadDept"); 
-const uploadSem=document.getElementById("uploadSem"); 
-const uploadSubj=document.getElementById("uploadSubj");
-
+const uploadDept=document.getElementById("uploadDept"); const uploadSem=document.getElementById("uploadSem"); const uploadSubj=document.getElementById("uploadSubj");
 function updateUploadSubjects(){
-  const dept=uploadDept.value; const sem=uploadSem.value; 
+  const dept=uploadDept.value; const sem=uploadSem.value;
   uploadSubj.innerHTML='<option value="">Select Subject</option>';
   if(subjectsData[dept]?.[sem]) subjectsData[dept][sem].forEach(sub=>{
     const opt=document.createElement("option"); opt.value=sub; opt.textContent=sub; uploadSubj.appendChild(opt);
   });
 }
+uploadDept.addEventListener("change",updateUploadSubjects); uploadSem.addEventListener("change",updateUploadSubjects);
 
-uploadDept.addEventListener("change",updateUploadSubjects); 
-uploadSem.addEventListener("change",updateUploadSubjects);
-
-document.getElementById("uploadForm").addEventListener("submit", async e=>{
+document.getElementById("uploadForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const formData=new FormData();
   formData.append("department",uploadDept.value);
@@ -342,20 +283,21 @@ document.getElementById("uploadForm").addEventListener("submit", async e=>{
   formData.append("subject",uploadSubj.value);
   formData.append("tag",document.getElementById("tagInput").value);
   formData.append("file",document.getElementById("fileInput").files[0]);
+
   const res=await fetch(`${API_URL}/api/notes/upload`,{
     method:"POST",
     headers:{Authorization:`Bearer ${localStorage.getItem("token")}`},
     body:formData
   });
   const data=await res.json();
-  if(res.ok){ 
-    alert("Upload successful!"); 
-    document.getElementById("uploadForm").reset();
-    if(selectedDepartment && selectedSemester && uploadSubj.value) 
-      loadNotes(selectedDepartment,selectedSemester,uploadSubj.value);
+  if(res.ok){ alert("Upload successful!"); document.getElementById("uploadForm").reset();
+    if(selectedDepartment && selectedSemester && uploadSubj.value) loadNotes(selectedDepartment,selectedSemester,uploadSubj.value);
     else showPage("departmentPage");
   } else alert(data.error||"Upload failed!");
 });
+
+// Initialize departments
+renderDepartments();
 </script>
 </body>
 </html>

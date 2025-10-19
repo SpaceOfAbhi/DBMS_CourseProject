@@ -6,38 +6,35 @@ const fs = require('fs');
 const Note = require('../models/Note');
 const authMiddleware = require('../middleware/auth');
 
-// 🧠 Multer setup — temporarily store files before upload
+// Multer setup
 const upload = multer({ dest: 'uploads/' });
 
-// ☁️ Cloudinary configuration (from your .env)
+// Cloudinary config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// 📤 Upload note
+// Upload note
 router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
   try {
     const { department, semester, subject, tag } = req.body;
     if (!req.file) return res.status(400).json({ error: 'File is required' });
 
-    // Upload to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: 'notes_uploads',
-      resource_type: 'auto', // supports pdf, images, etc.
+      resource_type: 'auto',
     });
 
-    // Delete local temp file
     fs.unlinkSync(req.file.path);
 
-    // Save note in DB
     const note = new Note({
       department,
       semester,
       subject,
       tag,
-      filePath: result.secure_url, // now stores the Cloudinary URL
+      filePath: result.secure_url, // Use filePath here
       uploadedBy: req.user._id,
       cloudinaryId: result.public_id,
     });
@@ -50,10 +47,11 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
   }
 });
 
-// 📥 Get notes by subject
+// Get notes by subject
 router.get('/subject/:subject', authMiddleware, async (req, res) => {
   try {
-    const notes = await Note.find({ subject: req.params.subject });
+    const notes = await Note.find({ subject: req.params.subject })
+      .populate('uploadedBy', 'name'); // populate uploader name
     res.json(notes);
   } catch (err) {
     console.error(err);
@@ -61,19 +59,16 @@ router.get('/subject/:subject', authMiddleware, async (req, res) => {
   }
 });
 
-// ❌ Delete note
-// ❌ Delete note
+// Delete note
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
     const note = await Note.findById(req.params.id);
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
-    // Only uploader can delete
     if (note.uploadedBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Delete from Cloudinary if it exists
     if (note.cloudinaryId) {
       await cloudinary.uploader.destroy(note.cloudinaryId, { resource_type: 'auto' });
     }
@@ -85,6 +80,5 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
-
 
 module.exports = router;
