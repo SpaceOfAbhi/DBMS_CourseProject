@@ -217,18 +217,18 @@ function loadSubjects(dept,sem){
   const container=document.getElementById("subjectsTiles"); container.innerHTML="";
   (subjectsData[dept]?.[sem]||["No subjects available"]).forEach(sub=>{
     const div=document.createElement("div"); div.classList.add("tile"); div.textContent=sub;
-    div.onclick=()=>loadNotes(dept,sem,sub); container.appendChild(div);
+    div.onclick=()=>loadNotes(sub); container.appendChild(div);
   });
 }
 
 // Notes
-async function loadNotes(dept,sem,sub){
+async function loadNotes(subject){
   showPage("notesPage");
-  document.getElementById("notesHeading").textContent=`${sub} Notes`;
+  document.getElementById("notesHeading").textContent=`${subject} Notes`;
   const notesList=document.getElementById("notesList"); 
   notesList.innerHTML="<p>Loading notes...</p>";
   try{
-    const res=await fetch(`${API_URL}/api/notes/subject/${sub}`,{
+    const res=await fetch(`${API_URL}/api/notes/subject/${subject}`,{
       headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
     });
     const notes=await res.json();
@@ -252,7 +252,7 @@ async function loadNotes(dept,sem,sub){
               method:"DELETE", headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}
             });
             const data=await delRes.json();
-            if(delRes.ok){ alert("✅ Note deleted!"); loadNotes(dept,sem,sub); }
+            if(delRes.ok){ alert("✅ Note deleted!"); loadNotes(subject); }
             else alert(`❌ ${data.error||"Failed to delete"}`);
           } catch(e){ console.error(e); alert("❌ Server error while deleting"); }
         }
@@ -290,10 +290,8 @@ document.getElementById("uploadForm").addEventListener("submit",async e=>{
     body:formData
   });
   const data=await res.json();
-  if(res.ok){ alert("Upload successful!"); document.getElementById("uploadForm").reset();
-    if(selectedDepartment && selectedSemester && uploadSubj.value) loadNotes(selectedDepartment,selectedSemester,uploadSubj.value);
-    else showPage("departmentPage");
-  } else alert(data.error||"Upload failed!");
+  if(res.ok){ alert("Upload successful!"); document.getElementById("uploadForm").reset(); showPage("departmentPage"); }
+  else alert(data.error||"Upload failed!");
 });
 
 // Initialize departments

@@ -3,7 +3,6 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const path = require("path");
 
 dotenv.config();
 const app = express();
@@ -11,7 +10,6 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json()); // Handle JSON data
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use("/api/auth", require("./routes/auth"));
@@ -20,7 +18,13 @@ app.use("/api/notes", require("./routes/notes"));
 // MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
+  .then(() => {
+    console.log("✅ MongoDB Connected");
+
+    // GridFSBucket will be initialized in notes.js after connection
+    const db = mongoose.connection;
+    db.on("error", console.error.bind(console, "❌ MongoDB connection error:"));
+  })
   .catch((err) => console.error("❌ DB Error:", err));
 
 // Start server
