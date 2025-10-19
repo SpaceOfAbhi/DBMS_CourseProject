@@ -68,7 +68,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     if (!note) return res.status(404).json({ error: 'Note not found' });
 
     // Only uploader can delete
-    if (note.uploadedBy.toString() !== req.user._id.toString())
+    if (!note.uploadedBy.equals(req.user._id))
       return res.status(403).json({ error: 'Not authorized' });
 
     // Delete from Cloudinary if it exists
