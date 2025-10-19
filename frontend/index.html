@@ -240,10 +240,14 @@ async function loadNotes(subject){
         <p class="meta">Uploaded by: ${note.uploadedBy?.name||'Unknown'} | ${new Date(note.createdAt).toLocaleDateString()}</p></div>`;
       const btnDiv=document.createElement("div"); btnDiv.classList.add("note-buttons");
 
-      const viewBtn=document.createElement("button"); viewBtn.textContent="View"; viewBtn.classList.add("view-btn");
-      viewBtn.onclick=()=>window.open(note.filePath,"_blank");
+      // ✅ View button using GridFS
+      const viewBtn=document.createElement("button"); 
+      viewBtn.textContent="View"; viewBtn.classList.add("view-btn");
+      viewBtn.onclick=()=>window.open(`${API_URL}/api/notes/view/${note._id}`, "_blank");
 
-      const deleteBtn=document.createElement("button"); deleteBtn.textContent="Delete"; deleteBtn.classList.add("delete-btn");
+      // Delete button
+      const deleteBtn=document.createElement("button"); 
+      deleteBtn.textContent="Delete"; deleteBtn.classList.add("delete-btn");
       deleteBtn.onclick=async ()=>{
         if(!note._id){ alert("❌ Missing note ID"); return; }
         if(confirm("Delete this note?")){
@@ -258,14 +262,18 @@ async function loadNotes(subject){
         }
       };
 
-      btnDiv.appendChild(viewBtn); btnDiv.appendChild(deleteBtn);
-      div.appendChild(btnDiv); notesList.appendChild(div);
+      btnDiv.appendChild(viewBtn); 
+      btnDiv.appendChild(deleteBtn);
+      div.appendChild(btnDiv); 
+      notesList.appendChild(div);
     });
   }catch(e){ notesList.innerHTML="<p>Error loading notes.</p>"; console.error(e); }
 }
 
 // Upload Form
-const uploadDept=document.getElementById("uploadDept"); const uploadSem=document.getElementById("uploadSem"); const uploadSubj=document.getElementById("uploadSubj");
+const uploadDept=document.getElementById("uploadDept"); 
+const uploadSem=document.getElementById("uploadSem"); 
+const uploadSubj=document.getElementById("uploadSubj");
 function updateUploadSubjects(){
   const dept=uploadDept.value; const sem=uploadSem.value;
   uploadSubj.innerHTML='<option value="">Select Subject</option>';
